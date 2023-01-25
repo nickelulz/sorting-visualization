@@ -1,0 +1,96 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Lachaise Assignment
+% LaTeX Template
+% Version 1.0 (26/6/2018)
+%
+% This template originates from:
+% http://www.LaTeXTemplates.com
+%
+% Authors:
+% Marion Lachaise & François Févotte
+% Vel (vel@LaTeXTemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+% 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[11pt]{article}
+
+\input{structure.tex} % Include the file specifying the document structure and custom commands
+
+% \usepackage[backend=biber, style=numeric, citestyle=mla]{biblatex} 
+\usepackage[backend=biber, style=numeric]{biblatex}
+\addbibresource{sources.bib} %Import the bibliography file
+
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{enumerate}
+\renewcommand{\arraystretch}{1.2}
+
+\usepackage{showframe}
+
+%----------------------------------------------------------------------------------------
+%	ASSIGNMENT INFORMATION
+%----------------------------------------------------------------------------------------
+
+\title{Technology Student Association:\\Game Development Design Log} % Title of the assignment
+
+\author{
+	Conference City and State: Cypress, Texas \\
+	Team Identification Number: (tbd)
+}
+
+\date{CyFair High School TSA --- \today}
+
+%----------------------------------------------------------------------------------------
+%	DOCUMENT
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\maketitle % Print the title
+
+\pagebreak
+
+% \section*{} -> un-numbered section
+% \section{} -> numbered section
+
+\section*{Credits}
+
+Mufaro Machaya --- \texttt{Coordinator, Lead Programmer} \\ % Author name and email address
+% Kevin Nguyen --- \texttt{Programmer} \\
+% Pablo MacKay --- \texttt{Musician} \\
+% Joshua Stewart --- \texttt{Artist} \\
+
+\section{Concept Art/Storyboard}
+
+\begin{figure}
+	\includegraphics[width=\linewidth]{concept_art/haircut.png}
+	\caption{Our initial idea: a haircut game.}
+	\label{fig:haircut}
+\end{figure}
+
+\begin{figure}
+	\includegraphics[width=\linewidth]{concept_imgs/noneuclidean.png}
+	\caption{Non-Euclidean Geometry. \cite{non-euclid-art}}
+	\label{fig:non-euclidean}
+\end{figure}
+
+\section{Scratch Work}
+
+\begin{enumerate}
+	\item \(\)
+\end{enumerate}
+
+\section{Game Description}
+
+\section{Plan of Work Log}
+
+\printbibliography %Prints bibliography
+
+\end{document}
