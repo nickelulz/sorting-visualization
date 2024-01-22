@@ -12,10 +12,12 @@
 #include <ctime>
 #include <array>
 
-
 using namespace std;
 
+// config
 const char *PRESS_START_2P_PATH = "./res/fonts/PressStart2P-Regular.ttf";
+
+// rectangle stuff
 const uint16_t WIDTH = sf::VideoMode::getDesktopMode().width,
       HEIGHT = sf::VideoMode::getDesktopMode().height;
 const uint16_t RECTANGLE_WIDTH = 5;
@@ -92,7 +94,7 @@ int main(void) {
 
 		// Do a single sort
 		if (true) { // intentional ratelimit
-			for (size_t i = current_index+1; i < rectangles.size(); i++) {
+			for (size_t i = 0; i < rectangles.size(); i++) {
 				if (rectangles[i].getFillColor() == sf::Color::Red)
 					rectangles[i].setFillColor(sf::Color::White);
 				if (rectangles[i].getGlobalBounds().height < 
