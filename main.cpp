@@ -1,7 +1,7 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
-#include <loguru.cpp>
 
+#include <chrono>
 #include <algorithm>
 #include <random>
 #include <iostream>
@@ -10,13 +10,20 @@
 #include <sstream>
 #include <cstdlib>
 #include <ctime>
+#include <array>
 
-#include "config.hpp"
 
 using namespace std;
 
-sf::VideoMode video_mode(DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
-sf::RenderWindow window(video_mode, "Sorting Visualizer");
+const char *PRESS_START_2P_PATH = "./res/fonts/PressStart2P-Regular.ttf";
+const uint16_t WIDTH = sf::VideoMode::getDesktopMode().width,
+      HEIGHT = sf::VideoMode::getDesktopMode().height;
+const uint16_t RECTANGLE_WIDTH = 5;
+const uint16_t RECTANGLE_COUNT = WIDTH / (RECTANGLE_WIDTH + 2);
+const uint16_t RECTANGLE_OUTLINE_WIDTH = 1;
+
+sf::VideoMode video_mode(WIDTH, HEIGHT); 
+sf::RenderWindow window(video_mode, "Sorting Visualizer", sf::Style::Fullscreen);
 
 // Resources/States
 sf::Font PRESS_START_2P;
@@ -28,7 +35,7 @@ uint64_t current_frame = 0;
 
 int main(void) {
 	if (!PRESS_START_2P.loadFromFile(PRESS_START_2P_PATH)) {
-		LOG_F(FATAL, "Could not load font Press Start 2P.");
+		cout << "Could not load font Press Start 2P." << endl;
 		exit(EXIT_FAILURE);
 	}
 
@@ -39,20 +46,18 @@ int main(void) {
 	sf::Text debug_text("", PRESS_START_2P, 20);
 	bool show_debug;
 
-	LOG_F(INFO, "Launch: %d x %d px", 
-		DEFAULT_WINDOW_WIDTH, 
-		DEFAULT_WINDOW_HEIGHT);
+	cout << "Launch Fullscreen:" << WIDTH << "x" << HEIGHT;
 
-	array<sf::RectangleShape, RECTANGLE_COUNT> rectangles;
-	for (uint32_t n = 0; n < rectangles.size(); ++n) {
-		rectangles[n].setSize(sf::Vector2f(RECTANGLE_WIDTH, n));
-		rectangles[n].setFillColor(sf::Color::White);
-		rectangles[n].setOutlineColor(sf::Color::Black);
-		rectangles[n].setOutlineThickness(RECTANGLE_OUTLINE_WIDTH);
+	vector<sf::RectangleShape> rectangles;
+	for (uint32_t n = 0; n < RECTANGLE_COUNT; ++n) {
+		sf::RectangleShape r;
+		r.setSize(sf::Vector2f(RECTANGLE_WIDTH, n));
+		r.setFillColor(sf::Color::White);
+		r.setOutlineColor(sf::Color::Black);
+		r.setOutlineThickness(RECTANGLE_OUTLINE_WIDTH);
+		rectangles.push_back(r);
 	}
 	random_shuffle(begin(rectangles), end(rectangles));
-
-	uint32_t current_index = 0;
 
 	while (window.isOpen()) {
 		sf::Event event;
@@ -87,31 +92,30 @@ int main(void) {
 
 		// Do a single sort
 		if (true) { // intentional ratelimit
-			uint32_t smallest_index = current_index;
-
-			for (uint32_t i = current_index+1; i < rectangles.size(); i++)
-				if (rectangles[i].getGlobalBounds().height < rectangles[current_index].getGlobalBounds().height)
-					smallest_index = i;
-
-			LOG_F(INFO, "smallest: %.2f", rectangles[smallest_index].getGlobalBounds().height);
-
-			auto temp = rectangles[smallest_index];
-			rectangles[smallest_index] = rectangles[current_index];
-			rectangles[current_index] = temp;
-
-			++current_index;
+			for (size_t i = current_index+1; i < rectangles.size(); i++) {
+				if (rectangles[i].getFillColor() == sf::Color::Red)
+					rectangles[i].setFillColor(sf::Color::White);
+				if (rectangles[i].getGlobalBounds().height < 
+				    rectangles[current_index].getGlobalBounds().height) {
+					auto temp = rectangles[current_index];
+					rectangles[]
+				}
+			}
 		}
 
 		// End FPS timer calculation
 		frame_end = chrono::high_resolution_clock::now();
 
 		// Calculate FPS
-		fps = float(1e9) / float(chrono::duration_cast<chrono::nanoseconds>(frame_end - frame_start).count());
+		fps = float(1e9) / float(chrono::duration_cast<chrono::nanoseconds>
+			(frame_end - frame_start).count());
 
 		// Apply the debug menu
 		if (show_debug) {
 			ostringstream debug_string;
-			debug_string << window.getSize().x << "x" << window.getSize().y << endl;
+			debug_string << 
+				window.getSize().x << 
+				"x" << window.getSize().y << endl;
 			debug_string << "fps: " << uint32_t(fps) << endl;
 			debug_text.setString(debug_string.str());
 
