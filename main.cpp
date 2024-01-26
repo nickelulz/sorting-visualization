@@ -16,30 +16,46 @@ using namespace std;
 
 // config
 const char *PRESS_START_2P_PATH = "./res/fonts/PressStart2P-Regular.ttf";
-
-// rectangle stuff
-const uint16_t WIDTH = sf::VideoMode::getDesktopMode().width,
-      HEIGHT = sf::VideoMode::getDesktopMode().height;
-const uint16_t RECTANGLE_WIDTH = 5;
+const auto RESOLUTION = sf::VideoMode::getDesktopMode();
+const uint16_t RECTANGLE_WIDTH = 5, RECTANGLE_OUTLINE_WIDTH = 1;
 const uint16_t RECTANGLE_COUNT = WIDTH / (RECTANGLE_WIDTH + 2);
-const uint16_t RECTANGLE_OUTLINE_WIDTH = 1;
 
-sf::VideoMode video_mode(WIDTH, HEIGHT); 
-sf::RenderWindow window(video_mode, "Sorting Visualizer", sf::Style::Fullscreen);
+enum sort_type {
+  // O(n^2)
+  BUBBLE,
+  INSERTION,
+  SELECTION,
 
-// Resources/States
-sf::Font PRESS_START_2P;
+  // O(nlogn)
+  MERGE,
+  QUICK,
 
-// Monitors
-chrono::high_resolution_clock::time_point frame_start, frame_end;
-float fps;
-uint64_t current_frame = 0;
+  // O(n+k)
+  RADIX,
+}
+
+struct timer {
+  chrono::high_resolution_clock::time_point frame_start, frame_end;
+  float fps;
+  uint64_t current_frame = 0;
+} timer_t;
+
+struct state_t {
+  bool show_debug;
+  enum sort_type sort_alg;
+}
 
 int main(void) {
+  sf::Font PRESS_START_2P;
+
 	if (!PRESS_START_2P.loadFromFile(PRESS_START_2P_PATH)) {
 		cout << "Could not load font Press Start 2P." << endl;
 		exit(EXIT_FAILURE);
 	}
+
+  // Graphics
+  sf::VideoMode video_mode(WIDTH, HEIGHT);
+  sf::RenderWindow window(video_mode, "Sorting Visualizer", sf::Style::Fullscreen);
 
 	// Window settings
 	window.setFramerateLimit(120);
@@ -48,7 +64,7 @@ int main(void) {
 	sf::Text debug_text("", PRESS_START_2P, 20);
 	bool show_debug;
 
-	cout << "Launch Fullscreen:" << WIDTH << "x" << HEIGHT;
+	cout << "Launch Fullscreen:" << RESOLUTION.width << "x" << RESOLUTION.height;
 
 	vector<sf::RectangleShape> rectangles;
 	for (uint32_t n = 0; n < RECTANGLE_COUNT; ++n) {
@@ -60,6 +76,33 @@ int main(void) {
 		rectangles.push_back(r);
 	}
 	random_shuffle(begin(rectangles), end(rectangles));
+
+  struct timer_t timer;
+  struct state_t state;
+  while (window.isOpen()) {
+    poll_events(&state);
+    perform_sort(&rectangles);
+    update_screen(&window, &rectangles);
+    timer_benchmark(&timer);
+  }
+}
+
+void poll_events(struct state_t *state) {
+  sf::Event event;
+  while (window.pollEvent(event)) {
+    if (event.type == sf::Event::Closed)
+      window.close();
+  }
+
+  // Enable/disable debug menu
+  if (sf::Keyboard::isKeyPressed(sf::Keyboard::O))
+    show_debug = true;
+  else if (sf::Keyboard::isKeyPressed(sf::Keyboard::P))
+    show_debug = false;
+}
+void perform_sort(vector<sf::RectangleShape> *rectangles) {}
+void update_screen(struct state_t *state, vector<sf::RectangleShape> *rectangles) {}
+void timer_benchmark(struct timer_t *timer) {}
 
 	while (window.isOpen()) {
 		sf::Event event;
@@ -92,18 +135,10 @@ int main(void) {
 			window.draw(rect);
 		});
 
-		// Do a single sort
-		if (true) { // intentional ratelimit
-			for (size_t i = 0; i < rectangles.size(); i++) {
-				if (rectangles[i].getFillColor() == sf::Color::Red)
-					rectangles[i].setFillColor(sf::Color::White);
-				if (rectangles[i].getGlobalBounds().height < 
-				    rectangles[current_index].getGlobalBounds().height) {
-					auto temp = rectangles[current_index];
-					rectangles[]
-				}
-			}
-		}
+    // if statement for rate-limiting
+    if (true) {
+      switch
+    }
 
 		// End FPS timer calculation
 		frame_end = chrono::high_resolution_clock::now();
@@ -115,8 +150,8 @@ int main(void) {
 		// Apply the debug menu
 		if (show_debug) {
 			ostringstream debug_string;
-			debug_string << 
-				window.getSize().x << 
+			debug_string <<
+				window.getSize().x <
 				"x" << window.getSize().y << endl;
 			debug_string << "fps: " << uint32_t(fps) << endl;
 			debug_text.setString(debug_string.str());
