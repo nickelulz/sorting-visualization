@@ -18,8 +18,10 @@ using namespace std;
 // config
 const char *PRESS_START_2P_PATH = "./res/fonts/PressStart2P-Regular.ttf";
 const auto RESOLUTION = sf::VideoMode::getDesktopMode();
-const uint16_t RECTANGLE_WIDTH = 5, RECTANGLE_OUTLINE_WIDTH = 1;
-const uint16_t RECTANGLE_COUNT = WIDTH / (RECTANGLE_WIDTH + 2);
+const uint16_t 
+  RECTANGLE_WIDTH = 5,
+  RECTANGLE_OUTLINE_WIDTH = 1;
+const uint16_t RECTANGLE_COUNT = RESOLUTION.width / (RECTANGLE_WIDTH + 2);
 
 enum sort_type {
   // O(n^2)
@@ -33,14 +35,14 @@ enum sort_type {
 
   // O(n+k)
   RADIX,
-}
+};
 
-struct timer {
+struct frame_timer_t {
   chrono::high_resolution_clock::time_point
     frame_start, frame_end;
   float fps;
   uint64_t current_frame = 0;
-} timer_t;
+};
 
 struct state_t {
   bool show_debug, rate_limiting;
@@ -51,7 +53,7 @@ struct state_t {
    * each stage of the sort
    */
   uint8_t rate_limit;
-} state_t;
+};
 
 struct graphics_t {
   // render context
@@ -61,9 +63,10 @@ struct graphics_t {
   // render objects
   sf::Font PRESS_START_2P;
   sf::Text debug_text;
-} graphics_t;
+};
 
-void perform_sort(struct state_t *state,
+static uint32_t sort_counter = 0;
+void perform_sort(state_t *state,
     vector<sf::RectangleShape> *rectangles) {
   switch (state->sort_alg) {
     case BUBBLE:
@@ -72,18 +75,21 @@ void perform_sort(struct state_t *state,
     case MERGE:
     case QUICK:
     case RADIX:
+      break;
   }
+
+  cout << "sort: " << sort_counter++ << endl;
 }
 
-void initialize(struct graphics_t *graphics) {
+void initialize(graphics_t *graphics) {
   // Graphics
   graphics->video_mode = sf::VideoMode(
-      WIDTH,
-      HEIGHT);
+     RESOLUTION.width,
+     RESOLUTION.height);
   graphics->window = sf::RenderWindow(
-      video_mode,
-      "Sorting Visualizer",
-      sf::Style::Fullscreen);
+     graphics->video_mode,
+     "Sorting Visualizer",
+     sf::Style::Fullscreen);
 
   if (!graphics->PRESS_START_2P.loadFromFile(PRESS_START_2P_PATH)) {
     cout << "Could not load font Press Start 2P." << endl;
@@ -110,7 +116,7 @@ vector<sf::RectangleShape> generate_rectangles {
   return rectangles;
 }
 
-void poll_events(struct state_t *state) {
+void poll_events(state_t *state) {
   sf::Event event;
   while (window.pollEvent(event)) {
     if (event.type == sf::Event::Closed)
@@ -124,8 +130,8 @@ void poll_events(struct state_t *state) {
     show_debug = false;
 }
 
-void update_screen(struct graphics_t *graphics,
-    struct state_t *state,
+void update_screen(graphics_t *graphics,
+    state_t *state,
     vector<sf::RectangleShape> *rectangles) {
   window.clear();
 
@@ -160,7 +166,7 @@ void update_screen(struct graphics_t *graphics,
   window.display();
 }
 
-void timer_benchmark(struct timer_t *timer) {
+void timer_benchmark(frame_timer_t *timer) {
   // end current frame
   timer->frame_end = chrono::high_resolution_clock::now();
   timer->current_frame++;
@@ -177,15 +183,17 @@ void timer_benchmark(struct timer_t *timer) {
 }
 
 int main(void) {
-	cout << "Launch Fullscreen:" <<
+  cout << "Launch Fullscreen:" <<
     RESOLUTION.width << "x" << RESOLUTION.height;
 
-  vector<sf::RectangleShape> rectanges = generate_rectangles();
+  frame_timer_t timer;
+  state_t state;
+  graphics_t graphics;
 
-  struct timer_t timer;
-  struct state_t state;
+  initialize(&graphics);
+  auto rectanges = generate_rectangles();
 
-  while (window.isOpen()) {
+  while (graphics.window.isOpen()) {
     poll_events(&state);
 
     // if statement for rate-limiting
