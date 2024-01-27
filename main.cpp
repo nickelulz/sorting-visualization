@@ -182,6 +182,7 @@ void timer_benchmark(frame_timer_t *timer) {
   timer->frame_end = 0;
 }
 
+// test
 int main(void) {
   cout << "Launch Fullscreen:" <<
     RESOLUTION.width << "x" << RESOLUTION.height;
