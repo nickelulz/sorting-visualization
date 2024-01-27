@@ -36,59 +36,79 @@ enum sort_type {
 }
 
 struct timer {
-  chrono::high_resolution_clock::time_point frame_start, frame_end;
+  chrono::high_resolution_clock::time_point
+    frame_start, frame_end;
   float fps;
   uint64_t current_frame = 0;
 } timer_t;
 
 struct state_t {
-  bool show_debug;
+  bool show_debug, rate_limiting;
   enum sort_type sort_alg;
-}
 
-int main(void) {
+  /*
+   * The number of frames between
+   * each stage of the sort
+   */
+  uint8_t rate_limit;
+} state_t;
+
+struct graphics_t {
+  // render context
+  sf::VideoMode video_mode;
+  sf::RenderWindow window;
+
+  // render objects
   sf::Font PRESS_START_2P;
+  sf::Text debug_text;
+} graphics_t;
 
-	if (!PRESS_START_2P.loadFromFile(PRESS_START_2P_PATH)) {
-		cout << "Could not load font Press Start 2P." << endl;
-		exit(EXIT_FAILURE);
-	}
-
-  // Graphics
-  sf::VideoMode video_mode(WIDTH, HEIGHT);
-  sf::RenderWindow window(video_mode, "Sorting Visualizer", sf::Style::Fullscreen);
-
-	// Window settings
-  window.setFramerateLimit(120);
-	window.setVerticalSyncEnabled(true);
-
-	sf::Text debug_text("", PRESS_START_2P, 20);
-	bool show_debug;
-
-	cout << "Launch Fullscreen:" << RESOLUTION.width << "x" << RESOLUTION.height;
-
-	vector<sf::RectangleShape> rectangles;
-	for (uint32_t n = 0; n < RECTANGLE_COUNT; ++n) {
-		sf::RectangleShape r;
-		r.setSize(sf::Vector2f(RECTANGLE_WIDTH, n));
-		r.setFillColor(sf::Color::White);
-		r.setOutlineColor(sf::Color::Black);
-		r.setOutlineThickness(RECTANGLE_OUTLINE_WIDTH);
-  	rectangles.push_back(r);
-	}
-	random_shuffle(begin(rectangles), end(rectangles));
-
-  struct timer_t timer;
-  struct state_t state;
-  while (window.isOpen()) {
-    poll_events(&state);
-    perform_sort(&rectangles);
-    update_screen(&window, &rectangles);
-    timer_benchmark(&timer);
+void perform_sort(struct state_t *state,
+    vector<sf::RectangleShape> *rectangles) {
+  switch (state->sort_alg) {
+    case BUBBLE:
+    case INSERTION:
+    case SELECTION:
+    case MERGE:
+    case QUICK:
+    case RADIX:
   }
 }
 
-unique_ptr<vector<sf::RectangleShape>> generate_rectangles
+void initialize(struct graphics_t *graphics) {
+  // Graphics
+  graphics->video_mode = sf::VideoMode(
+      WIDTH,
+      HEIGHT);
+  graphics->window = sf::RenderWindow(
+      video_mode,
+      "Sorting Visualizer",
+      sf::Style::Fullscreen);
+
+  if (!graphics->PRESS_START_2P.loadFromFile(PRESS_START_2P_PATH)) {
+    cout << "Could not load font Press Start 2P." << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  // Window settings
+  graphics->window.setFramerateLimit(120);
+  graphics->window.setVerticalSyncEnabled(true);
+  graphics->debug_text = sf::Text("", PRESS_START_2P, 20);
+}
+
+vector<sf::RectangleShape> generate_rectangles {
+  vector<sf::RectangleShape> rectangles;
+  for (uint32_t n = 0; n < RECTANGLE_COUNT; ++n) {
+    sf::RectangleShape new_rect;
+    new_rect.setSize(sf::Vector2f(RECTANGLE_WIDTH, n));
+    new_rect.setFillColor(sf::Color::White);
+    new_rect.setOutlineColor(sf::Color::Black);
+    new_rect.setOutlineThickness(RECTANGLE_OUTLINE_WIDTH);
+    rectangles.push_back(new_rect);
+  }
+  random_shuffle(begin(rectangles), end(rectangles));
+  return rectangles;
+}
 
 void poll_events(struct state_t *state) {
   sf::Event event;
@@ -104,13 +124,9 @@ void poll_events(struct state_t *state) {
     show_debug = false;
 }
 
-void perform_sort(vector<sf::RectangleShape> *rectangles) {
-  // if statement for rate-limiting
-  if (!(state->rate_limiting && timer->frame % state->rate_limit))
-    perform_sort(rectangles);
-}
-
-void update_screen(struct state_t *state, vector<sf::RectangleShape> *rectangles) {
+void update_screen(struct graphics_t *graphics,
+    struct state_t *state,
+    vector<sf::RectangleShape> *rectangles) {
   window.clear();
 
   // Update rectangle position
@@ -129,11 +145,25 @@ void update_screen(struct state_t *state, vector<sf::RectangleShape> *rectangles
   // if statement for rate-limiting
   if (!(state->rate_limiting && timer->frame % state->rate_limit))
     perform_sort(rectangles);
+
+  // Apply the debug menu
+  if (show_debug) {
+    ostringstream debug_string;
+
+    debug_string << window.getSize().x < "x" << window.getSize().y << endl;
+    debug_string << "fps: " << uint32_t(fps) << endl;
+    debug_text.setString(debug_string.str());
+
+    window.draw(debug_text);
+  }
+
+  window.display();
 }
 
 void timer_benchmark(struct timer_t *timer) {
   // end current frame
   timer->frame_end = chrono::high_resolution_clock::now();
+  timer->current_frame++;
 
   // calculate FPS
   fps = float(1e9) / float(
@@ -145,43 +175,24 @@ void timer_benchmark(struct timer_t *timer) {
   timer->frame_start = chrono::high_resolution_clock::now();
   timer->frame_end = 0;
 }
-		// Update rectangle position
-		for (uint32_t i = 0; i < rectangles.size(); i++) {
-			rectangles[i].setPosition(
-				(RECTANGLE_WIDTH + RECTANGLE_OUTLINE_WIDTH * 2) * i,
-				window.getSize().y - rectangles[i].getGlobalBounds().height
-			);
-		}
 
-		// Draw rectangle graphs
-		for_each(begin(rectangles), end(rectangles), [&window](auto rect) {
-			window.draw(rect);
-		});
+int main(void) {
+	cout << "Launch Fullscreen:" <<
+    RESOLUTION.width << "x" << RESOLUTION.height;
+
+  vector<sf::RectangleShape> rectanges = generate_rectangles();
+
+  struct timer_t timer;
+  struct state_t state;
+
+  while (window.isOpen()) {
+    poll_events(&state);
 
     // if statement for rate-limiting
-    if (true) {
-      switch
-    }
+    if (!(state->rate_limiting && timer->frame % state->rate_limit == 0))
+      perform_sort(&rectangles);
 
-		// End FPS timer calculation
-		frame_end = chrono::high_resolution_clock::now();
-
-		// Calculate FPS
-		fps = float(1e9) / float(chrono::duration_cast<chrono::nanoseconds>
-			(frame_end - frame_start).count());
-
-		// Apply the debug menu
-		if (show_debug) {
-			ostringstream debug_string;
-			debug_string <<
-				window.getSize().x < "x" << window.getSize().y << endl;
-			debug_string << "fps: " << uint32_t(fps) << endl;
-			debug_text.setString(debug_string.str());
-
-			window.draw(debug_text);
-		}
-
-		window.display();
-		++current_frame;
-	}
+    update_screen(&window, &state, &rectangles);
+    timer_benchmark(&timer);
+  }
 }
