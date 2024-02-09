@@ -16,12 +16,15 @@
 using namespace std;
 
 // config
-const char *PRESS_START_2P_PATH = "./res/fonts/PressStart2P-Regular.ttf";
-const auto RESOLUTION = sf::VideoMode::getDesktopMode();
-const uint16_t 
+const char *PRESS_START_2P_PATH =
+  "./PressStart2P-Regular.ttf";
+const auto RESOLUTION =
+  sf::VideoMode::getDesktopMode();
+const uint16_t
   RECTANGLE_WIDTH = 5,
   RECTANGLE_OUTLINE_WIDTH = 1;
-const uint16_t RECTANGLE_COUNT = RESOLUTION.width / (RECTANGLE_WIDTH + 2);
+const uint16_t RECTANGLE_COUNT =
+  RESOLUTION.width / (RECTANGLE_WIDTH + 2);
 
 enum sort_type {
   // O(n^2)
@@ -35,6 +38,27 @@ enum sort_type {
 
   // O(n+k)
   RADIX,
+
+  // O(n * n!)
+  BOGO,
+
+  SORT_ALG_COUNT
+};
+
+struct sort_detail_t {
+  const char *name, *runtime;
+  const sf::Keyboard::Key key_map;
+};
+
+const sort_detail_t SORT_DETAILS[] = {
+  //              Name         Average O(x)   Key Map
+  [BUBBLE]    = { "Bubble",    "O(n^2)",      sf::Keyboard::B },
+  [INSERTION] = { "Insertion", "O(n^2)",      sf::Keyboard::I },
+  [SELECTION] = { "Selection", "O(n^2)",      sf::Keyboard::S },
+  [MERGE]     = { "Merge",     "O(n*log(n))", sf::Keyboard::M },
+  [QUICK]     = { "Quick",     "O(n*log(n))", sf::Keyboard::Q },
+  [RADIX]     = { "Radix",     "O(n+k)",      sf::Keyboard::R },
+  [BOGO]      = { "Bogo",      "O(n*n!)",     sf::Keyboard::G },
 };
 
 struct frame_timer_t {
@@ -47,6 +71,7 @@ struct frame_timer_t {
 struct state_t {
   bool show_debug, rate_limiting;
   enum sort_type sort_alg;
+  vector<sf::RectangleShape> rectangles;
 
   /*
    * The number of frames between
@@ -66,8 +91,7 @@ struct graphics_t {
 };
 
 static uint32_t sort_counter = 0;
-void perform_sort(state_t *state,
-    vector<sf::RectangleShape> *rectangles) {
+void perform_sort(state_t *state) {
   switch (state->sort_alg) {
     case BUBBLE:
     case INSERTION:
@@ -75,18 +99,19 @@ void perform_sort(state_t *state,
     case MERGE:
     case QUICK:
     case RADIX:
+    case BOGO:
       break;
   }
 
   cout << "sort: " << sort_counter++ << endl;
 }
 
-void initialize(graphics_t *graphics) {
+void initialize(graphics_t *graphics, state_t *state) {
   // Graphics
   graphics->video_mode = sf::VideoMode(
      RESOLUTION.width,
      RESOLUTION.height);
-  graphics->window = sf::RenderWindow(
+  graphics->window.create(
      graphics->video_mode,
      "Sorting Visualizer",
      sf::Style::Fullscreen);
@@ -99,10 +124,13 @@ void initialize(graphics_t *graphics) {
   // Window settings
   graphics->window.setFramerateLimit(120);
   graphics->window.setVerticalSyncEnabled(true);
-  graphics->debug_text = sf::Text("", PRESS_START_2P, 20);
+  graphics->debug_text =
+    sf::Text("",
+      graphics->PRESS_START_2P,
+      20);
 }
 
-vector<sf::RectangleShape> generate_rectangles {
+vector<sf::RectangleShape> generate_rectangles() {
   vector<sf::RectangleShape> rectangles;
   for (uint32_t n = 0; n < RECTANGLE_COUNT; ++n) {
     sf::RectangleShape new_rect;
@@ -116,54 +144,77 @@ vector<sf::RectangleShape> generate_rectangles {
   return rectangles;
 }
 
-void poll_events(state_t *state) {
+void begin_sort(state_t *state, sort_type sort) {
+  state->sort_alg = sort;
+  state->rectangles = generate_rectangles();
+}
+
+void poll_events(state_t *state, graphics_t *graphics) {
   sf::Event event;
-  while (window.pollEvent(event)) {
-    if (event.type == sf::Event::Closed)
-      window.close();
+  while (graphics->window.pollEvent(event)) {
+    if (event.type == sf::Event::Closed ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::X))
+      graphics->window.close();
   }
+
+  for (uint8_t i = 0; i < SORT_ALG_COUNT; ++i)
+    if (sf::Keyboard::isKeyPressed(SORT_DETAILS[i].key_map))
+      begin_sort(state, (sort_type) i);
 
   // Enable/disable debug menu
   if (sf::Keyboard::isKeyPressed(sf::Keyboard::O))
-    show_debug = true;
+    state->show_debug = true;
   else if (sf::Keyboard::isKeyPressed(sf::Keyboard::P))
-    show_debug = false;
+    state->show_debug = false;
 }
 
 void update_screen(graphics_t *graphics,
-    state_t *state,
-    vector<sf::RectangleShape> *rectangles) {
-  window.clear();
+    state_t *state, frame_timer_t *timer) {
+  graphics->window.clear();
 
   // Update rectangle position
-  for (uint32_t i = 0; i < rectangles.size(); i++) {
-    rectangles[i].setPosition(
+  for (uint32_t i = 0; i < state->rectangles.size(); ++i) {
+    state->rectangles[i].setPosition(
       (RECTANGLE_WIDTH + RECTANGLE_OUTLINE_WIDTH * 2) * i,
-      window.getSize().y - rectangles[i].getGlobalBounds().height
+      graphics->window.getSize().y -
+        state->rectangles[i].getGlobalBounds().height
     );
+
+    graphics->window.draw(state->rectangles[i]);
   }
-
-  // Draw rectangle graphs
-  for_each(begin(*rectangles), end(*rectangles), [&window](auto rect) {
-    window.draw(rect);
-  });
-
-  // if statement for rate-limiting
-  if (!(state->rate_limiting && timer->frame % state->rate_limit))
-    perform_sort(rectangles);
 
   // Apply the debug menu
-  if (show_debug) {
+  if (state->show_debug) {
     ostringstream debug_string;
 
-    debug_string << window.getSize().x < "x" << window.getSize().y << endl;
-    debug_string << "fps: " << uint32_t(fps) << endl;
-    debug_text.setString(debug_string.str());
+    debug_string << graphics->window.getSize().x
+      << "x" << graphics->window.getSize().y << endl;
+    debug_string << "FPS: " << uint32_t(timer->fps) << endl;
+    debug_string << "Sorting Algorithm: " <<
+      SORT_DETAILS[state->sort_alg].name << " Sort" << endl;
+    debug_string << "Big O Runtime: " <<
+      SORT_DETAILS[state->sort_alg].runtime << endl;
 
-    window.draw(debug_text);
+    debug_string << endl;
+
+    debug_string << "O -> Show Debug Menu" << endl;
+    debug_string << "P -> Hide Debug Menu" << endl;
+
+    debug_string << endl;
+
+    debug_string << "B -> Bubble" << endl;
+    debug_string << "I -> Insertion" << endl;
+    debug_string << "S -> Selection" << endl;
+    debug_string << "M -> Merge" << endl;
+    debug_string << "Q -> Quick" << endl;
+    debug_string << "R -> Radix" << endl;
+    debug_string << "G -> Bogo" << endl;
+
+    graphics->debug_text.setString(debug_string.str());
+    graphics->window.draw(graphics->debug_text);
   }
 
-  window.display();
+  graphics->window.display();
 }
 
 void timer_benchmark(frame_timer_t *timer) {
@@ -172,17 +223,14 @@ void timer_benchmark(frame_timer_t *timer) {
   timer->current_frame++;
 
   // calculate FPS
-  fps = float(1e9) / float(
-    chrono::duration_cast<
-      chrono::nanoseconds(frame_end - frame_start)
-        .count());
+  timer->fps = float(1e9) / float(
+    chrono::duration_cast<chrono::nanoseconds>
+      (timer->frame_end - timer->frame_start).count());
 
   // begin next frame
   timer->frame_start = chrono::high_resolution_clock::now();
-  timer->frame_end = 0;
 }
 
-// test
 int main(void) {
   cout << "Launch Fullscreen:" <<
     RESOLUTION.width << "x" << RESOLUTION.height;
@@ -191,17 +239,21 @@ int main(void) {
   state_t state;
   graphics_t graphics;
 
-  initialize(&graphics);
-  auto rectanges = generate_rectangles();
+  state.show_debug = true;
+  initialize(&graphics, &state);
+  begin_sort(&state, BUBBLE);
 
+  // begins the timer for the current frame
+  // timer.frame_start = chrono::high_resolution_clock::now();
   while (graphics.window.isOpen()) {
-    poll_events(&state);
+    poll_events(&state, &graphics);
 
     // if statement for rate-limiting
-    if (!(state->rate_limiting && timer->frame % state->rate_limit == 0))
-      perform_sort(&rectangles);
+    if (!(state.rate_limiting &&
+          timer.current_frame % state.rate_limit == 0))
+      perform_sort(&state);
 
-    update_screen(&window, &state, &rectangles);
+    update_screen(&graphics, &state, &timer);
     timer_benchmark(&timer);
   }
 }

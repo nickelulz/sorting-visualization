@@ -14,7 +14,7 @@ run: ${EXE}
 	./${EXE}
 
 ${EXE}: $(OBJ)
-	$(CC) -o $(BIN)/exe $^ $(CFLAGS)
+	$(CC) -o $(EXE) $^ $(CFLAGS)
 	rm $(OBJ)
 
 %.o: %.cpp
