@@ -11,6 +11,7 @@
 #include <ctime>
 #include <array>
 #include <memory>
+#include <numeric>
 
 using namespace std;
 
@@ -20,10 +21,11 @@ const char *PRESS_START_2P_PATH =
 const auto RESOLUTION =
   sf::VideoMode::getDesktopMode();
 const uint16_t
-  RECTANGLE_WIDTH = 5,
+  RECTANGLE_WIDTH = 2,
   RECTANGLE_OUTLINE_WIDTH = 1;
 const uint16_t RECTANGLE_COUNT =
-  RESOLUTION.width / (RECTANGLE_WIDTH + 2);
+  // RESOLUTION.width / (RECTANGLE_WIDTH + 2) / 2;
+  150;
 
 enum sort_type {
   // O(n^2)
@@ -52,7 +54,7 @@ struct sort_detail_t {
 
 const sort_detail_t SORT_DETAILS[] = {
   //              Name         Average O(x)   Key Map         Complete
-  [BUBBLE]    = { "Bubble",    "O(n^2)",      sf::Keyboard::B, true },
+  [BUBBLE]    = { "Bubble",    "O(n^2)",      sf::Keyboard::B, true  },
   [INSERTION] = { "Insertion", "O(n^2)",      sf::Keyboard::I, false },
   [SELECTION] = { "Selection", "O(n^2)",      sf::Keyboard::S, false },
   [MERGE]     = { "Merge",     "O(n*log(n))", sf::Keyboard::M, false },
@@ -79,6 +81,8 @@ struct state_t {
   vector<sf::RectangleShape> rectangles;
   sort_trackers_t sort_vars;
 
+  uint64_t num_swaps;
+
   /*
    * The number of frames between
    * each stage of the sort
@@ -96,11 +100,14 @@ struct graphics_t {
   sf::Text debug_text;
 };
 
-static uint32_t sort_counter = 0;
-
 void perform_sort(state_t *state) {
-  if (is_sorted(begin(state->rectangles),
-        end(state->rectangles))) {
+  
+  vector<int> heights;
+  heights.reserve(state->rectangles.size());
+  for (auto& rect: state->rectangles)
+    heights.push_back(rect.getLocalBounds().height);
+ 
+  if (is_sorted(begin(heights), end(heights))) {
     state->sorted = true;
     for (auto& rect: state->rectangles)
       rect.setFillColor(sf::Color::Green);
@@ -109,31 +116,37 @@ void perform_sort(state_t *state) {
 
   switch (state->sort_alg) {
 
-    /*
     case BUBBLE:
     {
       if (state->sort_vars.lin.outer >= state->rectangles.size())
         break;
 
-      if (state->sort_vars.lin.inner == state->sort_vars.lin.outer - 1) {
+      auto& current = state->rectangles[state->sort_vars.lin.inner], 
+        next = state->rectangles[state->sort_vars.lin.inner + 1];
+
+      current.setFillColor(sf::Color::White);
+      if (state->sort_vars.lin.inner > 0)
+        state->rectangles[state->sort_vars.lin.inner-1].setFillColor(sf::Color::White);
+
+      if (state->sort_vars.lin.inner >= state->rectangles.size() - 1) {
         state->sort_vars.lin.inner = 0;
         state->sort_vars.lin.outer++;
+        break;
       }
-        
-      if (state->rectangles[state->sort_vars.lin.inner].getLocalBounds().height >
-          state->rectangles[state->sort_vars.lin.inner + 1].getLocalBounds().height) {
-        auto& temp = state->rectangles[state->sort_vars.lin.inner];
-        state->rectangles[state->sort_vars.lin.inner] =
-          state->rectangles[state->sort_vars.lin.inner + 1];
-        state->rectangles[state->sort_vars.lin.inner + 1] = temp;
+ 
+      if (current.getLocalBounds().height > next.getLocalBounds().height) {
+        state->rectangles[state->sort_vars.lin.inner] = next;
+        state->rectangles[state->sort_vars.lin.inner + 1] = current;
       }
 
+      state->rectangles[state->sort_vars.lin.inner].setFillColor(sf::Color::White);
       state->sort_vars.lin.inner++;
+
+      current.setFillColor(sf::Color::Blue);
+      next.setFillColor(sf::Color::Red);
 
       break;
     }
-  */
-  
 
     case INSERTION:
     {
@@ -160,8 +173,6 @@ void perform_sort(state_t *state) {
       break;
     }
   }
-
-  cout << "sort: " << sort_counter++ << endl;
 }
 
 void initialize(graphics_t *graphics, state_t *state) {
@@ -205,6 +216,7 @@ vector<sf::RectangleShape> generate_rectangles() {
 void begin_sort(state_t *state, sort_type sort) {
   state->sort_alg = sort;
   state->sorted = false;
+  state->sort_vars.lin = { .inner = 0, .outer = 0, .selection = 0 };
   state->rectangles = generate_rectangles();
 }
 
@@ -273,6 +285,18 @@ void update_screen(graphics_t *graphics,
     debug_string << "G -> Bogo" << (SORT_DETAILS[BOGO].complete ? "" : " (INCOMPLETE)") << endl;
 
     debug_string << "X -> Quit" << endl;
+
+    long sum = 0;
+    for (auto& r: state->rectangles)
+      sum += r.getLocalBounds().height;
+
+    if (state->sort_alg == BUBBLE) {
+      debug_string << endl;
+      debug_string << "Inner: " << state->sort_vars.lin.inner << endl;
+      debug_string << "Outer: " << state->sort_vars.lin.outer << endl;
+    }
+    debug_string << "Sum: " << sum << endl;
+    debug_string << "Number of Rectangles: " << RECTANGLE_COUNT << endl; 
 
     graphics->debug_text.setString(debug_string.str());
     graphics->window.draw(graphics->debug_text);
