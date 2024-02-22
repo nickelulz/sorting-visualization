@@ -21,11 +21,10 @@ const char *PRESS_START_2P_PATH =
 const auto RESOLUTION =
   sf::VideoMode::getDesktopMode();
 const uint16_t
-  RECTANGLE_WIDTH = 2,
+  RECTANGLE_WIDTH = 5,
   RECTANGLE_OUTLINE_WIDTH = 1;
 const uint16_t RECTANGLE_COUNT =
-  // RESOLUTION.width / (RECTANGLE_WIDTH + 2) / 2;
-  150;
+  RESOLUTION.width / (RECTANGLE_WIDTH + 2) / 2;
 
 enum sort_type {
   // O(n^2)
@@ -118,28 +117,45 @@ void perform_sort(state_t *state) {
 
     case BUBBLE:
     {
-      if (state->sort_vars.lin.outer >= state->rectangles.size())
+      size_t i = state->sort_vars.lin.inner,
+        o = state->sort_vars.lin.outer;
+
+      if (o >= state->rectangles.size())
         break;
 
       auto& current = state->rectangles[state->sort_vars.lin.inner], 
         next = state->rectangles[state->sort_vars.lin.inner + 1];
 
       current.setFillColor(sf::Color::White);
-      if (state->sort_vars.lin.inner > 0)
-        state->rectangles[state->sort_vars.lin.inner-1].setFillColor(sf::Color::White);
 
-      if (state->sort_vars.lin.inner >= state->rectangles.size() - 1) {
+      if (i > 0)
+        state->rectangles[i - 1].setFillColor(sf::Color::White);
+
+      if (i >= state->rectangles.size() - 1 - o) {
         state->sort_vars.lin.inner = 0;
         state->sort_vars.lin.outer++;
         break;
       }
  
       if (current.getLocalBounds().height > next.getLocalBounds().height) {
-        state->rectangles[state->sort_vars.lin.inner] = next;
-        state->rectangles[state->sort_vars.lin.inner + 1] = current;
+        
+        cout 
+          << "old next: " 
+          << next.getLocalBounds().height 
+          << " old current: " 
+          << current.getLocalBounds().height 
+          << endl;
+        state->rectangles[i + 1] = current;
+        state->rectangles[i] = next;
+        cout 
+          << "next: " 
+          << next.getLocalBounds().height 
+          << " current: " 
+          << current.getLocalBounds().height 
+          << endl;
       }
 
-      state->rectangles[state->sort_vars.lin.inner].setFillColor(sf::Color::White);
+      state->rectangles[i].setFillColor(sf::Color::White);
       state->sort_vars.lin.inner++;
 
       current.setFillColor(sf::Color::Blue);
