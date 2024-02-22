@@ -1,5 +1,4 @@
 #include <SFML/Graphics.hpp>
-#include <SFML/Audio.hpp>
 
 #include <chrono>
 #include <algorithm>
@@ -69,18 +68,10 @@ struct frame_timer_t {
   uint64_t current_frame = 0;
 };
 
-struct sort_trackers_t {
-  union
-  {
-    // Linear Sort Options
-    // Bubble, Insertion, Selection
-    struct {
-      uint16_t outer,
-        inner,
-        selection;
-    },
-  }
+union sort_trackers_t {
+  struct { uint16_t inner, outer, selection; } lin;
 };
+
 
 struct state_t {
   bool show_debug, rate_limiting, sorted;
@@ -117,11 +108,32 @@ void perform_sort(state_t *state) {
   }
 
   switch (state->sort_alg) {
+
+    /*
     case BUBBLE:
     {
+      if (state->sort_vars.lin.outer >= state->rectangles.size())
+        break;
+
+      if (state->sort_vars.lin.inner == state->sort_vars.lin.outer - 1) {
+        state->sort_vars.lin.inner = 0;
+        state->sort_vars.lin.outer++;
+      }
+        
+      if (state->rectangles[state->sort_vars.lin.inner].getLocalBounds().height >
+          state->rectangles[state->sort_vars.lin.inner + 1].getLocalBounds().height) {
+        auto& temp = state->rectangles[state->sort_vars.lin.inner];
+        state->rectangles[state->sort_vars.lin.inner] =
+          state->rectangles[state->sort_vars.lin.inner + 1];
+        state->rectangles[state->sort_vars.lin.inner + 1] = temp;
+      }
+
+      state->sort_vars.lin.inner++;
 
       break;
     }
+  */
+  
 
     case INSERTION:
     {
