@@ -48,17 +48,18 @@ enum sort_type {
 struct sort_detail_t {
   const char *name, *runtime;
   const sf::Keyboard::Key key_map;
+  const bool complete;
 };
 
 const sort_detail_t SORT_DETAILS[] = {
-  //              Name         Average O(x)   Key Map
-  [BUBBLE]    = { "Bubble",    "O(n^2)",      sf::Keyboard::B },
-  [INSERTION] = { "Insertion", "O(n^2)",      sf::Keyboard::I },
-  [SELECTION] = { "Selection", "O(n^2)",      sf::Keyboard::S },
-  [MERGE]     = { "Merge",     "O(n*log(n))", sf::Keyboard::M },
-  [QUICK]     = { "Quick",     "O(n*log(n))", sf::Keyboard::Q },
-  [RADIX]     = { "Radix",     "O(n+k)",      sf::Keyboard::R },
-  [BOGO]      = { "Bogo",      "O(n*n!)",     sf::Keyboard::G },
+  //              Name         Average O(x)   Key Map         Complete
+  [BUBBLE]    = { "Bubble",    "O(n^2)",      sf::Keyboard::B, true },
+  [INSERTION] = { "Insertion", "O(n^2)",      sf::Keyboard::I, false },
+  [SELECTION] = { "Selection", "O(n^2)",      sf::Keyboard::S, false },
+  [MERGE]     = { "Merge",     "O(n*log(n))", sf::Keyboard::M, false },
+  [QUICK]     = { "Quick",     "O(n*log(n))", sf::Keyboard::Q, false },
+  [RADIX]     = { "Radix",     "O(n+k)",      sf::Keyboard::R, false },
+  [BOGO]      = { "Bogo",      "O(n*n!)",     sf::Keyboard::G, false },
 };
 
 struct frame_timer_t {
@@ -68,10 +69,24 @@ struct frame_timer_t {
   uint64_t current_frame = 0;
 };
 
+struct sort_trackers_t {
+  union
+  {
+    // Linear Sort Options
+    // Bubble, Insertion, Selection
+    struct {
+      uint16_t outer,
+        inner,
+        selection;
+    },
+  }
+};
+
 struct state_t {
-  bool show_debug, rate_limiting;
+  bool show_debug, rate_limiting, sorted;
   enum sort_type sort_alg;
   vector<sf::RectangleShape> rectangles;
+  sort_trackers_t sort_vars;
 
   /*
    * The number of frames between
@@ -91,16 +106,47 @@ struct graphics_t {
 };
 
 static uint32_t sort_counter = 0;
+
 void perform_sort(state_t *state) {
+  if (is_sorted(begin(state->rectangles),
+        end(state->rectangles))) {
+    state->sorted = true;
+    for (auto& rect: state->rectangles)
+      rect.setFillColor(sf::Color::Green);
+    return;
+  }
+
   switch (state->sort_alg) {
     case BUBBLE:
-    case INSERTION:
-    case SELECTION:
-    case MERGE:
-    case QUICK:
-    case RADIX:
-    case BOGO:
+    {
+
       break;
+    }
+
+    case INSERTION:
+    {
+      break;
+    }
+    case SELECTION:
+    {
+      break;
+    }
+    case MERGE:
+    {
+      break;
+    }
+    case QUICK:
+    {
+      break;
+    }
+    case RADIX:
+    {
+      break;
+    }
+    case BOGO:
+    {
+      break;
+    }
   }
 
   cout << "sort: " << sort_counter++ << endl;
@@ -146,6 +192,7 @@ vector<sf::RectangleShape> generate_rectangles() {
 
 void begin_sort(state_t *state, sort_type sort) {
   state->sort_alg = sort;
+  state->sorted = false;
   state->rectangles = generate_rectangles();
 }
 
@@ -195,6 +242,9 @@ void update_screen(graphics_t *graphics,
     debug_string << "Big O Runtime: " <<
       SORT_DETAILS[state->sort_alg].runtime << endl;
 
+    if (state->sorted)
+      debug_string << "SORT COMPLETE!" << endl;
+
     debug_string << endl;
 
     debug_string << "O -> Show Debug Menu" << endl;
@@ -202,13 +252,15 @@ void update_screen(graphics_t *graphics,
 
     debug_string << endl;
 
-    debug_string << "B -> Bubble" << endl;
-    debug_string << "I -> Insertion" << endl;
-    debug_string << "S -> Selection" << endl;
-    debug_string << "M -> Merge" << endl;
-    debug_string << "Q -> Quick" << endl;
-    debug_string << "R -> Radix" << endl;
-    debug_string << "G -> Bogo" << endl;
+    debug_string << "B -> Bubble" << (SORT_DETAILS[BUBBLE].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "I -> Insertion" << (SORT_DETAILS[INSERTION].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "S -> Selection" << (SORT_DETAILS[SELECTION].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "M -> Merge" << (SORT_DETAILS[MERGE].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "Q -> Quick" << (SORT_DETAILS[QUICK].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "R -> Radix" << (SORT_DETAILS[RADIX].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "G -> Bogo" << (SORT_DETAILS[BOGO].complete ? "" : " (INCOMPLETE)") << endl;
+
+    debug_string << "X -> Quit" << endl;
 
     graphics->debug_text.setString(debug_string.str());
     graphics->window.draw(graphics->debug_text);
