@@ -1,0 +1,11 @@
+selection sort
+
+for (outer, 0->n-1, + 1)
+	selection = outer
+	for (inner, 0->n-1, +1)
+		if (array[selection] < array[inner])
+			selection = inner;
+	
+	temp = array[selection]
+	array[selection] = array[outer]
+	array[outer] = smallest

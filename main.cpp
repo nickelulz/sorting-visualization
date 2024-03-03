@@ -21,7 +21,7 @@ const char *PRESS_START_2P_PATH =
 const auto RESOLUTION =
   sf::VideoMode::getDesktopMode();
 const uint16_t
-  RECTANGLE_WIDTH = 5,
+  RECTANGLE_WIDTH = 10,
   RECTANGLE_OUTLINE_WIDTH = 1;
 const uint16_t RECTANGLE_COUNT =
   RESOLUTION.width / (RECTANGLE_WIDTH + 2) / 2;
@@ -59,7 +59,7 @@ const sort_detail_t SORT_DETAILS[] = {
   [MERGE]     = { "Merge",     "O(n*log(n))", sf::Keyboard::M, false },
   [QUICK]     = { "Quick",     "O(n*log(n))", sf::Keyboard::Q, false },
   [RADIX]     = { "Radix",     "O(n+k)",      sf::Keyboard::R, false },
-  [BOGO]      = { "Bogo",      "O(n*n!)",     sf::Keyboard::G, false },
+  [BOGO]      = { "Bogo",      "O(n*n!)",     sf::Keyboard::G, true },
 };
 
 struct frame_timer_t {
@@ -72,7 +72,6 @@ struct frame_timer_t {
 union sort_trackers_t {
   struct { uint16_t inner, outer, selection; } lin;
 };
-
 
 struct state_t {
   bool show_debug, rate_limiting, sorted;
@@ -99,8 +98,19 @@ struct graphics_t {
   sf::Text debug_text;
 };
 
+int rheight(sf::RectangleShape *rect) {
+  return rect->getLocalBounds().height;
+}
+
 void perform_sort(state_t *state) {
-  
+
+  /*
+   * First, determine whether the array is fully
+   * sorted before attempting to perform any step of
+   * the selected sorting algorithm by converting the
+   * whole array to integers then invoking 'is_sorted()'
+   */
+
   vector<int> heights;
   heights.reserve(state->rectangles.size());
   for (auto& rect: state->rectangles)
@@ -113,6 +123,10 @@ void perform_sort(state_t *state) {
     return;
   }
 
+  /*
+   * Then, perform one step of the sorting algorithm.
+   */ 
+
   switch (state->sort_alg) {
 
     case BUBBLE:
@@ -123,8 +137,8 @@ void perform_sort(state_t *state) {
       if (o >= state->rectangles.size())
         break;
 
-      auto& current = state->rectangles[state->sort_vars.lin.inner], 
-        next = state->rectangles[state->sort_vars.lin.inner + 1];
+      auto& current = state->rectangles[i], 
+        next = state->rectangles[i + 1];
 
       current.setFillColor(sf::Color::White);
 
@@ -137,55 +151,87 @@ void perform_sort(state_t *state) {
         break;
       }
  
-      if (current.getLocalBounds().height > next.getLocalBounds().height) {
-        
-        cout 
-          << "old next: " 
-          << next.getLocalBounds().height 
-          << " old current: " 
-          << current.getLocalBounds().height 
-          << endl;
+      if (rheight(&current) > rheight(&next)) {  
         state->rectangles[i + 1] = current;
         state->rectangles[i] = next;
-        cout 
-          << "next: " 
-          << next.getLocalBounds().height 
-          << " current: " 
-          << current.getLocalBounds().height 
-          << endl;
       }
 
       state->rectangles[i].setFillColor(sf::Color::White);
       state->sort_vars.lin.inner++;
 
-      current.setFillColor(sf::Color::Blue);
-      next.setFillColor(sf::Color::Red);
+      current.setFillColor(sf::Color::Red);
+      next.setFillColor(sf::Color::Blue);
 
       break;
     }
 
     case INSERTION:
     {
+      size_t i = state->sort_vars.lin.inner,
+        o = state->sort_vars.lin.outer;
       break;
     }
+
     case SELECTION:
     {
+      // Aliasing the linear sort variables
+      size_t i = state->sort_vars.lin.inner,
+        o = state->sort_vars.lin.outer,
+        s = state->sort_vars.lin.selection;
+
+      // Reset previous colors
+      state->rectangles[o].setFillColor(sf::Color::White);
+
+      // End on outer loop
+      if (o >= state->rectangles.size())
+        break;
+
+      auto& selection = state->rectangles[s],
+        compare = state->rectangles[i];
+
+      if (i >= state->rectangles.size()) {
+        state->sort_vars.lin.inner = 0;
+        state->sort_vars.lin.outer++;
+        state->sort_vars.lin.selection = state->sort_vars.lin.outer;
+        break;
+      }
+
+      if (rheight(&compare) < rheight(&selection)) {
+        state->sort_vars.lin.selection = i;
+        state->sort_vars.lin.inner++;
+        break;
+      }
+
+      auto& temp = state->rectangles[s];
+      state->rectangles[s] = state->rectangles[o];
+      state->rectangles[o] = temp;
+
+      state->sort_vars.lin.outer++;
+      state->sort_vars.lin.selection = state->sort_vars.lin.outer;
+      state->sort_vars.lin.inner = 0;
+
       break;
     }
+
     case MERGE:
     {
       break;
     }
+
     case QUICK:
     {
       break;
     }
+
     case RADIX:
     {
       break;
     }
+
     case BOGO:
     {
+      // Bogo literally just randomly sorts the array.
+      random_shuffle(begin(state->rectangles), end(state->rectangles));
       break;
     }
   }
@@ -209,10 +255,8 @@ void initialize(graphics_t *graphics, state_t *state) {
   // Window settings
   graphics->window.setFramerateLimit(120);
   graphics->window.setVerticalSyncEnabled(true);
-  graphics->debug_text =
-    sf::Text("",
-      graphics->PRESS_START_2P,
-      20);
+  graphics->debug_text = sf::Text("",
+    graphics->PRESS_START_2P, 20);
 }
 
 vector<sf::RectangleShape> generate_rectangles() {
@@ -232,7 +276,7 @@ vector<sf::RectangleShape> generate_rectangles() {
 void begin_sort(state_t *state, sort_type sort) {
   state->sort_alg = sort;
   state->sorted = false;
-  state->sort_vars.lin = { .inner = 0, .outer = 0, .selection = 0 };
+  state->sort_vars.lin = { 0 };
   state->rectangles = generate_rectangles();
 }
 
@@ -261,13 +305,13 @@ void update_screen(graphics_t *graphics,
 
   // Update rectangle position
   for (uint32_t i = 0; i < state->rectangles.size(); ++i) {
-    state->rectangles[i].setPosition(
+    auto& rectangle = state->rectangles[i];
+    rectangle.setPosition(
       (RECTANGLE_WIDTH + RECTANGLE_OUTLINE_WIDTH * 2) * i,
-      graphics->window.getSize().y -
-        state->rectangles[i].getGlobalBounds().height
+      graphics->window.getSize().y - rheight(&rectangle)
     );
 
-    graphics->window.draw(state->rectangles[i]);
+    graphics->window.draw(rectangle);
   }
 
   // Apply the debug menu
@@ -292,19 +336,19 @@ void update_screen(graphics_t *graphics,
 
     debug_string << endl;
 
-    debug_string << "B -> Bubble" << (SORT_DETAILS[BUBBLE].complete ? "" : " (INCOMPLETE)") << endl;
-    debug_string << "I -> Insertion" << (SORT_DETAILS[INSERTION].complete ? "" : " (INCOMPLETE)") << endl;
-    debug_string << "S -> Selection" << (SORT_DETAILS[SELECTION].complete ? "" : " (INCOMPLETE)") << endl;
-    debug_string << "M -> Merge" << (SORT_DETAILS[MERGE].complete ? "" : " (INCOMPLETE)") << endl;
-    debug_string << "Q -> Quick" << (SORT_DETAILS[QUICK].complete ? "" : " (INCOMPLETE)") << endl;
-    debug_string << "R -> Radix" << (SORT_DETAILS[RADIX].complete ? "" : " (INCOMPLETE)") << endl;
-    debug_string << "G -> Bogo" << (SORT_DETAILS[BOGO].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "B -> Bubble"    << (SORT_DETAILS[ BUBBLE    ].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "I -> Insertion" << (SORT_DETAILS[ INSERTION ].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "S -> Selection" << (SORT_DETAILS[ SELECTION ].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "M -> Merge"     << (SORT_DETAILS[ MERGE     ].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "Q -> Quick"     << (SORT_DETAILS[ QUICK     ].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "R -> Radix"     << (SORT_DETAILS[ RADIX     ].complete ? "" : " (INCOMPLETE)") << endl;
+    debug_string << "G -> Bogo"      << (SORT_DETAILS[ BOGO      ].complete ? "" : " (INCOMPLETE)") << endl;
 
     debug_string << "X -> Quit" << endl;
 
     long sum = 0;
     for (auto& r: state->rectangles)
-      sum += r.getLocalBounds().height;
+      sum += rheight(&r);
 
     if (state->sort_alg == BUBBLE) {
       debug_string << endl;
@@ -347,8 +391,7 @@ int main(void) {
   initialize(&graphics, &state);
   begin_sort(&state, BUBBLE);
 
-  // begins the timer for the current frame
-  // timer.frame_start = chrono::high_resolution_clock::now();
+  // Main Loop
   while (graphics.window.isOpen()) {
     poll_events(&state, &graphics);
 
